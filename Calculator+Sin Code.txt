@@ -1,0 +1,160 @@
+#include <108lcd.h>
+#include <mega32.h>
+#include <delay.h>
+#include <stdlib.h>
+#include <math.h>
+int row = 1,col = 1, key=0;
+char k,Op;
+int a=0, b=0, i=0,j=0, q=0, temp=0;
+float x=0,r=0;
+int mz=0;
+char Str[16];
+int Fact(int x){
+    int f=1;
+    for(j=1;j<=x;j++){
+        f=f*j;
+    } 
+    return f;
+}
+float Pow(float x,int n){
+    float p=x;
+    for(q=n-1;q>0;q--) 
+       p=p*x;
+    return p; 
+}
+void Operation(char Op, int i){
+        lcd_gotoxy(i,1);
+        if(Op == '/')lcd_puts("/") ;
+        if(Op == '*')lcd_puts("*") ;
+        if(Op == '-')lcd_puts("-") ;
+        if(Op ==  '+')lcd_puts("+") ;
+        if(Op == 'S')lcd_puts("S"); 
+        delay_ms(50); 
+}
+void Sin(float x,float r,int i,char Str[16],int mz){
+    float t=0;
+    int intValue;
+    float diffValue;
+    int floatValue; 
+    r=x-(Pow(x,3)/Fact(3))+(Pow(x,5)/Fact(5))-(Pow(x,7)/Fact(7)); 
+    lcd_gotoxy(i,1); 
+    lcd_puts("="); 
+    i=i+1;
+    lcd_gotoxy(i,1);
+    if(mz==1){
+       lcd_puts("-");
+       i=i+1; 
+    }
+    intValue=floor(r);
+    itoa(intValue,Str);    
+    lcd_puts(Str); 
+    i=i+2;   
+    lcd_gotoxy(i,1);
+    lcd_puts(".");
+    diffValue=r-intValue;
+    t=diffValue*100; 
+    floatValue=floor(t);
+    i=i+1;
+    lcd_gotoxy(i,1);
+    itoa(floatValue,Str);    
+    lcd_puts(Str);
+}
+    void Calculate(char Op,int a, int b,int r,char Str[16],int i){
+    int check=0;   
+    if(Op == '+')r = a + b ;
+    if(Op == '-')r = a - b ;
+    if(Op == '*')r = a * b ;
+    if(Op == '/')r = a / b ;
+    if(Op == 'S'){ 
+        check=1;
+		while(a>=360){
+			a=a-360;
+		}
+        if(a>=180){
+          a=a-180;
+          mz=1;
+         }
+        x=a*(0.0174532925); 
+        Sin(x,r,i,Str,mz);    
+    } 
+    if(check ==0){
+        lcd_gotoxy(i,1);
+        lcd_puts("="); 
+        lcd_gotoxy(i+1,1);        
+        itoa(r,Str);    
+        lcd_puts(Str); 
+    }
+    delay_ms(50);
+}
+char getKey(void){
+    DDRA = 0xf0;
+    PORTA = 0x0f;
+    while(PINA == 0x0f);
+    switch(PINA){
+        case 0b00001110 : col = 1; break;
+        case 0b00001101 : col = 2; break;
+        case 0b00001011 : col = 3; break;
+        case 0b00000111 : col = 4; break;
+    }         
+    
+    DDRA = 0x0f;
+    PORTA = 0xf0;
+    while(PINA == 0xf0);
+    switch(PINA){
+        case 0b11100000 : row = 1; break;
+        case 0b11010000 : row = 2; break;
+        case 0b10110000 : row = 3; break;
+        case 0b01110000 : row = 4; break;
+    }
+    delay_ms(100);  
+    if(row<3)
+        key = (row - 1)*4 + col - 1; 
+    else if(row==3 && col==1)  
+        key=8; 
+    else if(row==3 && col==2)  
+        key=9;
+    else{
+        if(row==3 && col==3)
+            key='+';
+        else if(row==3 && col==4)
+            key='-';
+        else if(row==4 && col==1)
+            key='*';
+        else if(row==4 && col==2)
+            key='/';
+        else if(row==4 && col==3)
+            key='=';
+        else if (row==4 && col==4)
+            key='S';
+    }
+    return key; 
+}
+
+void main(void){
+lcd_init(16);
+lcd_putsf("Calc");
+lcd_gotoxy(0,1);
+lcd_putsf("Eq:");
+i=3;
+    while(1){
+    k = getKey(); 
+    itoa(k,Str);
+    if(k== '+' || k=='-'|| k=='*'|| k=='/' || k=='S'){
+        Op=k;
+        Operation(Op,i);
+        a=temp;
+        temp=0;
+    }
+    else if(k == '='){ 
+        b=temp;
+        Calculate(Op,a,b,r,Str,i);
+    }
+    else{
+        lcd_puts(Str);
+        temp=temp*10+k;
+    }
+    delay_ms(250);
+    while(PINA == 0XF0);
+    i++;
+    }
+}
